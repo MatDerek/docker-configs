@@ -1,0 +1,54 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mtechmatthew/workation-nurse-be:latest
+    container_name: workation-container
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+    networks:
+      - app-network
+    ports:
+      - "9000:9000"
+    command: sh -c "composer install && php artisan migrate && php-fpm"
+
+  webserver:
+    image: nginx:latest
+    container_name: workation-nginx
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./:/var/www/
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/nginx-be-server-block.conf:/etc/nginx/sites-enabled/workation-be.conf
+    depends_on:
+      - app
+    networks:
+      - app-network
+
+  db:
+    image: mysql:8.0
+    container_name: workation-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: workation-nurse
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: secret
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  dbdata:
+    driver: local
